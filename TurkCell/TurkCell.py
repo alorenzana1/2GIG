@@ -22,6 +22,28 @@ B0,0,0,3,1,2,20,N,"%s"
 P1
 """
 
+class TextRedirector(object):
+    def __init__(self, widget):
+        self.widget = widget
+        self.widget.tag_configure("error", foreground="red")
+        self.widget.tag_configure("warn", foreground="yellow", background="black")
+        self.widget.tag_configure("info", foreground="black")
+
+    def write(self, str, tag):
+        self.widget.configure(state="normal")
+        self.widget.insert("end", str + '\n', (tag,))
+        self.widget.configure(state="disabled")
+        # Autoscroll to the bottom
+        self.widget.yview(Tkinter.END)
+
+    def info(self, msg):
+        self.write(msg,"info")
+
+    def warn(self, msg):
+        self.write(msg,"warn")
+
+    def error(self, msg):
+        self.write(msg,"error")
 
 def serial_ports():
     """ 
@@ -57,13 +79,14 @@ def serial_ports():
     return result
 
 class simpleapp_tk(Tkinter.Tk):
-    def __init__(self,parent):
+    def __init__(self,parent=None):
         Tkinter.Tk.__init__(self,parent)
-        self.parent = parent
         self.initialize()
+
         self.atDevice = None
         self.CartonNo = None
         self.csv_file = ""
+        
         
         """
         Looking for CSV under FTP_file folder, if does not exit that location create it
@@ -85,14 +108,66 @@ class simpleapp_tk(Tkinter.Tk):
             with open(pathCSVFile,'a+b') as file:
                 wr = csv.writer(file,quoting=csv.QUOTE_NONE)
                 wr.writerow(csv_header)
+
+
     def initialize(self):
-        self.grid()
+
+        log_frame = Tkinter.Frame(self)
+        interface_frame = Tkinter.Frame(self)
+
+        log_frame.pack(side="right", fill="both", expand=True)
+        interface_frame.pack(side="left", fill="x")
+
+        comport_frame = Tkinter.Frame(interface_frame)
+        center_frame = Tkinter.Frame(interface_frame)
         
-        """
-        Creation of IMEI entry, 
-        """
-        self.entry = Tkinter.Entry(self)
-        self.entry.grid(column=3,row=0)
+        comport_frame.pack(side="top",)
+        center_frame.pack(side="bottom",fill="y")
+
+        #Logger
+        import ScrolledText
+        terminal = ScrolledText.ScrolledText(log_frame, state='disabled', height = 1)
+        terminal.pack(side="left", fill="both", expand=True)
+        # Create textLogger
+        self.logger = TextRedirector(terminal)
+
+
+        #Comport Interface
+        list_frame = Tkinter.Frame(comport_frame)
+        btns_frame = Tkinter.Frame(comport_frame)
+
+        list_frame.pack(side="top", fill="both", expand=True)
+        btns_frame.pack(side="bottom")
+
+        #Listbox that lists serial comport available 
+        self.listBox = Tkinter.Listbox(list_frame)
+        self.listBox.pack(side="left", expand=True)
+        comports = serial_ports()
+        for comport in range(len(comports)):
+            self.listBox.insert(Tkinter.END,comports[comport])
+        
+        scrollBar = Tkinter.Scrollbar(list_frame, orient=Tkinter.VERTICAL)
+        scrollBar.pack(side="right", fill="y", expand=True)
+        scrollBar.configure(command=self.listBox.yview)
+        self.listBox.configure(yscrollcommand=scrollBar.set)
+
+        self.Refresh_Btn = Tkinter.Button(btns_frame,text=u"Refresh",command=self.OnButtonClick, width=15)
+        self.Refresh_Btn.pack()
+        
+        self.Connect_Btn = Tkinter.Button(btns_frame,text=u"Connect",command=self.Connect, width=15)
+        self.Connect_Btn.pack()
+
+        self.Disconnect_Btn = Tkinter.Button(btns_frame,text=u"Disconnect",command=self.Disconect, width=15,state='disable')
+        self.Disconnect_Btn.pack()
+    
+        #Creation of IMEI entry, 
+        self.CartonNo_label = Tkinter.Label(center_frame,text="Carton No.")
+        self.CartonNo_label.pack()
+        self.entry = Tkinter.Entry(center_frame)
+        self.entry.pack()
+
+        self.SetCarton_Btn = Tkinter.Button(center_frame,text=u"Set Carton No", command = self.SetCartonNo, width=15)
+        self.SetCarton_Btn.pack()
         
         if os.path.isfile('nIMEI.bin'):
             with open('nIMEI.bin','r') as file:
@@ -101,84 +176,49 @@ class simpleapp_tk(Tkinter.Tk):
             with open('nIMEI.bin','w') as file:
                 imei = "35337208000000"
                 file.write(imei)
-        
-        print imei
 
-        self.terminal = Tkinter.Frame(self,height=400, width=500)
-        self.terminal.grid(column=6,row=0)
-        wid = self.terminal.winfo_id()
-        #os.system("cmd -into %d -geometry 40x20 -sb &" %wid)
+        self.IMEI_label = Tkinter.Label(center_frame,text="IMEI")
+        self.IMEI_label.pack()
 
         self.IMEI = Tkinter.StringVar()
         self.IMEI.set(imei)
-        self.IMEIentry = Tkinter.Entry(self,textvariable=self.IMEI)
-        self.IMEIentry.grid(column=5,row=0)
-        
-        self.SetCartonBtn = Tkinter.Button(self,text=u"Set Carton No", command = self.SetCartonNo)
-        self.SetCartonBtn.grid(column=4,row=0,sticky=Tkinter.W)
-        
-        #self.PrintBtn = Tkinter.Button(self,text=u"Print",command=self.PrintLabel)
-        #self.PrintBtn.grid(column=3,row=1)
-        
-        self.FetchBtn = Tkinter.Button(self,text=u"Write IMEI",command=self.WriteIMEI)
-        self.FetchBtn.grid(column=3,row=2)
-        
-        self.button = Tkinter.Button(self,text=u"Refresh",command=self.OnButtonClick)
-        self.button.grid(column=0,row=0, sticky=Tkinter.W)
-        
-        self.buttonComport = Tkinter.Button(self,text=u"Connect",command=self.Connect)
-        self.buttonComport.grid(column=0,row=0, sticky=Tkinter.E)
-        
-        """
-        Listbox that lists serial comport available 
-        """
-        self.listBox = Tkinter.Listbox(self,height=3)
-        self.listBox.grid(column=0,row=1)
-        comports = serial_ports()
-        print comports
-        for comport in range(len(comports)):
-            self.listBox.insert(Tkinter.END,comports[comport])
-        
-        scrollBar = Tkinter.Scrollbar(self,orient=Tkinter.VERTICAL)
-        scrollBar.grid(column=1,row=1, sticky=Tkinter.W)
-        
-        scrollBar.configure(command=self.listBox.yview)
-        self.listBox.configure(yscrollcommand=scrollBar.set)
+        self.IMEIentry = Tkinter.Entry(center_frame,textvariable=self.IMEI)
+        self.IMEIentry.pack()
     
+        self.FetchBtn = Tkinter.Button(center_frame,text=u"Write IMEI",command=self.WriteIMEI, width=15)
+        self.FetchBtn.pack()
+
+        self.PrintBtn = Tkinter.Button(center_frame,text=u"Print",command= lambda: self.PrintLabel(self.IMEI.get()), width=15)
+        self.PrintBtn.pack()
+        
+
+        self.logger.info( "IMEI to be written: " + imei)
+
     def SetCartonNo(self):
         if self.entry.get():
             self.CartonNo = self.entry.get()
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="OK", height=5, width=20)
-            label.pack()
+
+            self.logger.info( "OK" )
         else:
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="Please Set Carton No",height=5, width=20)
-            label.pack()
-        
+
+            self.logger.info("Please Set Carton No")
     
     def WriteIMEI(self):
         if not self.atDevice:
-            print "Connect device"
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="Connect device!", height=5, width=20)
-            label.pack()
+            self.logger.info( "Connect device")
+
         elif not self.CartonNo:
-            print "Set Carton No"
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="Set Carton No!", height=5, width=20)
-            label.pack()
+            self.logger.info( "Set Carton No")
+
         elif self.atDevice.Get_IMEI().rstrip() != "000000000000000":
-            print "Is not blank"
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="IMEI is not Blank!", height=5, width=20)
-            label.pack()
+            self.logger.info( "Is not blank")
+
         else:
             #IMEI is blank, proceed to write new IMEI
             #Generate new IMEI
             currentIMEI = self.IMEI.get()
             IMEItoWrite = currentIMEI + GetcheckSum(currentIMEI)
-            print "IMEI to write:" + IMEItoWrite
+            self.logger.info( "IMEI to write:" + IMEItoWrite)
             
             """
             #Write IMEI
@@ -189,7 +229,7 @@ class simpleapp_tk(Tkinter.Tk):
             !!!!!!!!!!!!!!!!!!!!
             """
             self.atDevice.Reboot()
-            print "Device is being rebooting"
+            self.logger.info( "Device is being rebooting")
             self.FetchBtn.config(state='disabled')
             self.after(20000,self.VerifyIMEI,IMEItoWrite) #Device has been restarted
 
@@ -197,27 +237,15 @@ class simpleapp_tk(Tkinter.Tk):
         self.atDevice.port.close()
         self.atDevice.port.open()
         retrived = self.atDevice.Get_IMEI()
-        print retrived
+        self.logger.info( retrived )
         if retrived.rstrip() == IMEI:
-            print "success"
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="OK!", height=5, width=20)
-            label.pack()
-            
-            PrintBtn = Tkinter.Button(toplevel,text=u"Print label",command= lambda: self.PrintLabel(IMEI))
-            PrintBtn.pack()
-
+            self.logger.info( "success" )
             self.IncrementIMEI()
             
             self.FetchData()
         else:
-            print "unsuccess"
-            toplevel = Tkinter.Toplevel()
-            label = Tkinter.Label(toplevel, text="IMEI written unsuccessfully!", height=5, width=20)
-            label.pack()
-            
-            PrintBtn = Tkinter.Button(toplevel,text=u"Print label",command= lambda: self.PrintLabel(IMEI))
-            PrintBtn.pack()
+            self.logger.info( "unsuccess" )
+
             
         self.FetchBtn.config(state='normal')
     
@@ -233,7 +261,7 @@ class simpleapp_tk(Tkinter.Tk):
     
     def FetchData(self):
         csv_row =[None] * len(csv_header)
-        print "Fetching data"
+        self.logger.info( "Fetching data" )
         
         csv_row[0] = "PlaceHolder"
         csv_row[1] = GetTimestamp()
@@ -258,6 +286,7 @@ class simpleapp_tk(Tkinter.Tk):
             wr.writerow(csv_row)
         
     def PrintLabel(self, labelNo ):
+        self.logger.info("Printing label: " + labelNo)
         from zebra import zebra
         Label = IMEI % (labelNo,labelNo)
         z = zebra()
@@ -279,39 +308,36 @@ class simpleapp_tk(Tkinter.Tk):
         index = self.listBox.curselection()
         if index:
             comport = self.listBox.get(index)
-            print "Connecting: " + comport
+            self.logger.info( "Connecting: " + comport )
             try:
                 self.atDevice = AT.ATDevice(comport)
             except:
-                print "Device taken"
-                toplevel = Tkinter.Toplevel()
-                label = Tkinter.Label(toplevel, text="Device is busy!", height=5, width=20)
-                label.pack()
+                self.logger.info( "Device taken" )
+            else:
+                self.logger.info( "Comport opened" )
+                self.Disconnect_Btn.config(state="normal")
+                self.Connect_Btn.config(state="disable")
         else:
-            print "No comport selected"
-        
-# Define a function for the thread
-def print_time( threadName, delay):
-   count = 0
-   while count < 5:
-      time.sleep(delay)
-      count += 1
-      print "%s" % (GetTimestamp())
-      
+            self.logger.info( "No comport selected" )
+
+    def Disconect(self):
+        port_to_close = self.atDevice.port
+        try:
+            port_to_close.close()
+        except:
+            pass
+        else:
+            self.atDevice = None
+            self.logger.info("Comport %s closed" % port_to_close.portstr)
+            self.Disconnect_Btn.config(state="disable")
+            self.Connect_Btn.config(state="normal")
+
 def GetTimestamp():
     return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     
 if __name__ == "__main__":
 
-    """
-    try:
-        thread = threading.Thread(target=print_time,args=("Thread",1))
-        thread.daemon = True
-        thread.start()
-    except:
-        print "Error: unable to start thread"
-    """
-    
+
     app = simpleapp_tk(None)
     app.title('my application')
     app.mainloop()
