@@ -1,4 +1,7 @@
 from distutils.core import setup
 import py2exe
 
-setup(console=['IMEI_writer.py'])
+
+setup(
+	console=['IMEI_writer.py']
+	)

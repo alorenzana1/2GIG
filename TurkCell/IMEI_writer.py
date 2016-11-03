@@ -10,15 +10,21 @@ import time
 import datetime
 from zebra import zebra
 
+"""
 try:
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'libraries'))
+    try:
+        sys.path.append(os.path.join(os.path.dirname(__file__), 'libraries'))
+    except NameError:
+        sys.path.append(os.path.join(os.path.dirname(sys.argv[0]), 'libraries'))
     from FlexCheckSum import *
     import AT
 except IndexError:
     raise RuntimeError("You must have.. /libraries to run this program!")
-
+"""
+from FlexCheckSum import *
+import AT
 Radio_Model_supported = ["2GIG-3GTC90-A", "2GIG-3GTL-A-GC3"]
-Radio = Radio_Model_supported[0]
+Radio = Radio_Model_supported[1]
 
 csv_header = ["SNID","TestDataTime","SimType","IMEI","IMSI","RevisionID","ModuleSWPN","ICCID","ModuleSN","SignalLevel1","SignalLevel2","DC-DC","TesterSN","CAL1900M","CAL850M","Result","CartonNo"]
 
@@ -145,7 +151,11 @@ class IMEI_writer(Tkinter.Tk):
         if not os.path.exists("FTP_file"):
             os.makedirs("FTP_file")
 
-        currentPath = os.path.dirname(os.path.abspath(__file__))
+        try:
+            currentPath = os.path.dirname(os.path.abspath(__file__))
+        except NameError:  # We are the main py2exe script, not a module
+            currentPath = os.path.dirname(os.path.abspath(sys.argv[0]))
+
         path = os.path.join(currentPath,"FTP_file")
         
         """
