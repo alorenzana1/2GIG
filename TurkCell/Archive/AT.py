@@ -24,6 +24,7 @@ class ATDevice:
             
         if(self.StartCMD()):
             print "starting command line has not been successful"
+            return 1
         else:
             print "connected"
 
@@ -67,6 +68,13 @@ class ATDevice:
             return "ERROR"
         else:
             return 0
+
+    def Get_CGSSN(self):
+        [status, data] = self.send_cmd("#cgssn")
+        if status:
+            return "ERROR"
+        else:
+            return data[8:]
     
     def Get_IMEI(self):
         [status, data] = self.send_cmd("#cgsn")
