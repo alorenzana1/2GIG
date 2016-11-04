@@ -10,19 +10,22 @@ import time
 import datetime
 from zebra import zebra
 
-"""
+
 try:
     try:
         sys.path.append(os.path.join(os.path.dirname(__file__), 'libraries'))
-    except NameError:
+    except NameError: #We are the main py2exe script, not a module
         sys.path.append(os.path.join(os.path.dirname(sys.argv[0]), 'libraries'))
     from FlexCheckSum import *
     import AT
 except IndexError:
     raise RuntimeError("You must have.. /libraries to run this program!")
+
 """
 from FlexCheckSum import *
 import AT
+"""
+
 Radio_Model_supported = ["2GIG-3GTC90-A", "2GIG-3GTL-A-GC3"]
 Radio = Radio_Model_supported[1]
 
@@ -260,7 +263,7 @@ class IMEI_writer(Tkinter.Tk):
                 if self.RUT == Radio_Model_supported[0]:
                     imei = "35337208000000"
                 if self.RUT == Radio_Model_supported[1]:
-                    imei = "00000000000000"
+                    imei = "01452300019902"
                 file.write(imei)
 
         self.IMEI_label = Tkinter.Label(center_frame,text="IMEI")
@@ -522,4 +525,10 @@ if __name__ == "__main__":
         app.title('IMEI writer  '+Radio_Model_supported[0])
     if Radio == Radio_Model_supported[1]:
         app.title('IMEI writer  '+Radio_Model_supported[1])
+
+    try:
+        app.iconbitmap(os.path.join(os.path.dirname(__file__), 'images/2gig.ico'))
+    except NameError: #We are the main py2exe script, not a module
+        app.iconbitmap(os.path.join(os.path.dirname(sys.argv[0]), 'images/2gig.ico'))
+
     app.mainloop()
