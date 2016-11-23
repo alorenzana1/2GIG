@@ -27,7 +27,7 @@ import AT
 """
 
 Radio_Model_supported = ["2GIG-3GTC90-A", "2GIG-3GTL-A-GC3"]
-Radio = Radio_Model_supported[1]
+Radio = Radio_Model_supported[0]
 
 csv_header = ["SNID","TestDataTime","SimType","IMEI","IMSI","RevisionID","ModuleSWPN","ICCID","ModuleSN","SignalLevel1","SignalLevel2","DC-DC","TesterSN","CAL1900M","CAL850M","Result","CartonNo"]
 
@@ -69,8 +69,8 @@ labelLarge="""
 def CreateLabel(strValue):
     while len(strValue) < 16:
         strValue = '0' + strValue
-    MSS = strValue[2:9] 
-    LSS = strValue[10:16]
+    MSS = strValue[1:9] 
+    LSS = strValue[9:16]
     return LableTemplate %(strValue,MSS,LSS,strValue,MSS,LSS)
 
 class TextRedirector(object):
@@ -342,6 +342,8 @@ class IMEI_writer(Tkinter.Tk):
             elif self.atDevice.Get_IMEI().rstrip() != "000000000000000":
                 self.logger.warn( "Is not blank")
 
+            elif not self.ZebraPrinter:
+                self.logger.warn( "Connect printer" )
             else:
                 #IMEI is blank, proceed to write new IMEI
                 #Generate new IMEI
